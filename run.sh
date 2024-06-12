@@ -1,0 +1,1 @@
+python read_cnf.py myfile/20800102060755.cnf

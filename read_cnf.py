@@ -31,10 +31,11 @@ All the information of the binary file encoding was taken from the file
 
 """
 
-import sys
-import numpy as np
-import time
 import struct
+import sys
+import time
+
+import numpy as np
 
 
 def read_cnf_file(filename, write_output=False):
@@ -94,15 +95,15 @@ def read_cnf_file(filename, write_output=False):
     """
 
     # Name of the output file
-    out_filename = filename + '.txt'
+    out_filename = filename + ".txt"
 
     # Dictionary with all the information read
     read_dic = {}
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         i = 0
         while True:
             # List of available section headers
-            sec_header = 0x70 + i*0x30
+            sec_header = 0x70 + i * 0x30
             i += 1
             # Section id in header
             sec_id_header = uint32_at(f, sec_header)
@@ -112,7 +113,7 @@ def read_cnf_file(filename, write_output=False):
                 break
 
             # Location of the begining of each sections
-            sec_loc = uint32_at(f, sec_header+0x0a)
+            sec_loc = uint32_at(f, sec_header + 0x0A)
             # Known section id's:
             # Parameter section (times, energy calibration, etc)
             if sec_id_header == 0x00012000:
@@ -136,28 +137,29 @@ def read_cnf_file(filename, write_output=False):
                 continue
 
             # For known sections: section header ir repeated in section block
-            if (sec_id_header != uint32_at(f, sec_loc)):
-                print('File {}: Format error\n'.format(filename))
+            if sec_id_header != uint32_at(f, sec_loc):
+                print("File {}: Format error\n".format(filename))
 
     # Once the file is read, some derived magnitudes can be obtained
 
     # Convert channels to energy
-    if set(('Channels', 'Energy coefficients')) <= set(read_dic):
+    if set(("Channels", "Energy coefficients")) <= set(read_dic):
         read_dic.update(chan_to_energy(read_dic))
 
     # Compute ingegration between markers
-    if set(('Channels', 'Left marker')) <= set(read_dic):
+    if set(("Channels", "Left marker")) <= set(read_dic):
         read_dic.update(markers_integration(read_dic))
 
-    print(50*'=')
-    print(10*' '+'File '+str(filename)+' succesfully read!' + 10*' ')
-    print(50*'=')
+    print(50 * "=")
+    print(10 * " " + "File " + str(filename) + " succesfully read!" + 10 * " ")
+    print(50 * "=")
 
     # If true, writes an text output file
     if write_output:
         write_to_file(out_filename, read_dic)
 
     return read_dic
+
 
 ##########################################################
 # Definitions for reading some data types
@@ -166,22 +168,22 @@ def read_cnf_file(filename, write_output=False):
 
 def uint8_at(f, pos):
     f.seek(pos)
-    return np.fromfile(f, dtype=np.dtype('<u1'), count=1)[0]
+    return np.fromfile(f, dtype=np.dtype("<u1"), count=1)[0]
 
 
 def uint16_at(f, pos):
     f.seek(pos)
-    return np.fromfile(f, dtype=np.dtype('<u2'), count=1)[0]
+    return np.fromfile(f, dtype=np.dtype("<u2"), count=1)[0]
 
 
 def uint32_at(f, pos):
     f.seek(pos)
-    return np.fromfile(f, dtype=np.dtype('<u4'), count=1)[0]
+    return np.fromfile(f, dtype=np.dtype("<u4"), count=1)[0]
 
 
 def uint64_at(f, pos):
     f.seek(pos)
-    return np.fromfile(f, dtype=np.dtype('<u8'), count=1)[0]
+    return np.fromfile(f, dtype=np.dtype("<u8"), count=1)[0]
 
 
 def pdp11f_at(f, pos):
@@ -191,15 +193,15 @@ def pdp11f_at(f, pos):
     """
     f.seek(pos)
     # Read two int16 numbers
-    tmp16 = np.fromfile(f, dtype=np.dtype('<u2'), count=2)
+    tmp16 = np.fromfile(f, dtype=np.dtype("<u2"), count=2)
     # Swapp positions
-    mypack = struct.pack('HH', tmp16[1], tmp16[0])
-    f = struct.unpack('f', mypack)[0]/4.0
+    mypack = struct.pack("HH", tmp16[1], tmp16[0])
+    f = struct.unpack("f", mypack)[0] / 4.0
     return f
 
 
 def time_at(f, pos):
-    return ~uint64_at(f, pos)*1e-7
+    return ~uint64_at(f, pos) * 1e-7
 
 
 def datetime_at(f, pos):
@@ -209,7 +211,8 @@ def datetime_at(f, pos):
 def string_at(f, pos, length):
     f.seek(pos)
     # In order to avoid characters with not utf8 encoding
-    return f.read(length).decode('utf8').rstrip('\00').rstrip()
+    return f.read(length).decode("utf8", "replace").rstrip("\00").rstrip()
+
 
 ###########################################################
 # Definitions for locating and reading data inside the file
@@ -222,19 +225,19 @@ def get_strings(f, offs_str):
     sample_name = string_at(f, offs_str + 0x0030, 0x40)
     sample_id = string_at(f, offs_str + 0x0070, 0x10)
     # sample_id   = string_at(f, offs_str + 0x0070, 0x40)
-    sample_type = string_at(f, offs_str + 0x00b0, 0x10)
-    sample_unit = string_at(f, offs_str + 0x00c4, 0x40)
-    user_name = string_at(f, offs_str + 0x02d6, 0x18)
-    sample_desc = string_at(f, offs_str + 0x036e, 0x100)
+    sample_type = string_at(f, offs_str + 0x00B0, 0x10)
+    sample_unit = string_at(f, offs_str + 0x00C4, 0x40)
+    user_name = string_at(f, offs_str + 0x02D6, 0x18)
+    sample_desc = string_at(f, offs_str + 0x036E, 0x100)
 
     out_dic = {
-               'Sample name': sample_name,
-               'Sample id': sample_id,
-               'Sample type': sample_type,
-               'Sample unit': sample_unit,
-               'User name': user_name,
-               'Sample description': sample_desc
-              }
+        "Sample name": sample_name,
+        "Sample id": sample_id,
+        "Sample type": sample_type,
+        "Sample unit": sample_unit,
+        "User name": user_name,
+        "Sample description": sample_desc,
+    }
 
     return out_dic
 
@@ -246,23 +249,24 @@ def get_energy_calibration(f, offs_param):
     A = np.empty(4)
     A[0] = pdp11f_at(f, offs_calib + 0x44)
     A[1] = pdp11f_at(f, offs_calib + 0x48)
-    A[2] = pdp11f_at(f, offs_calib + 0x4c)
+    A[2] = pdp11f_at(f, offs_calib + 0x4C)
     A[3] = pdp11f_at(f, offs_calib + 0x50)
 
     # Assuming a maximum length of 0x11 for the energy unit
-    energy_unit = string_at(f, offs_calib + 0x5c, 0x11)
+    energy_unit = string_at(f, offs_calib + 0x5C, 0x11)
 
     # MCA type
-    MCA_type = string_at(f, offs_calib + 0x9c, 0x10)
+    MCA_type = string_at(f, offs_calib + 0x9C, 0x10)
 
     # Data source
     data_source = string_at(f, offs_calib + 0x108, 0x10)
 
-    out_dic = {'Energy coefficients': A,
-               'Energy unit': energy_unit,
-               'MCA type': MCA_type,
-               'Data source': data_source
-               }
+    out_dic = {
+        "Energy coefficients": A,
+        "Energy unit": energy_unit,
+        "MCA type": MCA_type,
+        "Data source": data_source,
+    }
 
     return out_dic
 
@@ -275,12 +279,12 @@ def get_shape_calibration(f, offs_param):
 
     offs_calib = offs_param + 0x30 + uint16_at(f, offs_param + 0x22)
     B = np.empty(4)
-    B[0] = pdp11f_at(f, offs_calib + 0xdc)
-    B[1] = pdp11f_at(f, offs_calib + 0xe0)
-    B[2] = pdp11f_at(f, offs_calib + 0xe4)
-    B[3] = pdp11f_at(f, offs_calib + 0xe8)
+    B[0] = pdp11f_at(f, offs_calib + 0xDC)
+    B[1] = pdp11f_at(f, offs_calib + 0xE0)
+    B[2] = pdp11f_at(f, offs_calib + 0xE4)
+    B[3] = pdp11f_at(f, offs_calib + 0xE8)
 
-    out_dic = {'Shape coefficients': B}
+    out_dic = {"Shape coefficients": B}
 
     return out_dic
 
@@ -289,24 +293,25 @@ def get_channel_data(f, offs_param, offs_chan):
     """Read channel data."""
 
     # Total number of channels
-    n_channels = uint8_at(f, offs_param + 0x00ba) * 256
+    n_channels = uint8_at(f, offs_param + 0x00BA) * 256
     # Data in each channel
     f.seek(offs_chan + 0x200)
-    chan_data = np.fromfile(f, dtype='<u4', count=n_channels)
+    chan_data = np.fromfile(f, dtype="<u4", count=n_channels)
     # Total counts of the channels
     total_counts = np.sum(chan_data)
     # Measurement mode
-    meas_mode = string_at(f, offs_param + 0xb0, 0x03)
+    meas_mode = string_at(f, offs_param + 0xB0, 0x03)
 
     # Create array with the correct channel numbering
-    channels = np.arange(1, n_channels+1, 1)
+    channels = np.arange(1, n_channels + 1, 1)
 
-    out_dic = {'Number of channels': n_channels,
-               'Channels data': chan_data,
-               'Channels': channels,
-               'Total counts': total_counts,
-               'Measurement mode': meas_mode
-               }
+    out_dic = {
+        "Number of channels": n_channels,
+        "Channels data": chan_data,
+        "Channels": channels,
+        "Total counts": total_counts,
+        "Measurement mode": meas_mode,
+    }
 
     return out_dic
 
@@ -321,12 +326,13 @@ def get_date_time(f, offs_param):
     live_time = time_at(f, offs_times + 0x11)
 
     # Convert to formated date and time
-    start_time_str = time.strftime('%d-%m-%Y, %H:%M:%S', time.gmtime(start_time))
+    start_time_str = time.strftime("%d-%m-%Y, %H:%M:%S", time.gmtime(start_time))
 
-    out_dic = {'Real time': real_time,
-               'Live time': live_time,
-               'Start time': start_time_str
-               }
+    out_dic = {
+        "Real time": real_time,
+        "Live time": live_time,
+        "Start time": start_time_str,
+    }
     return out_dic
 
 
@@ -334,24 +340,25 @@ def get_markers(f, offs_mark):
     """Read left and right markers."""
 
     # TODO: not working properly
-    marker_left = uint32_at(f, offs_mark + 0x007a)
-    marker_right = uint32_at(f, offs_mark + 0x008a)
+    marker_left = uint32_at(f, offs_mark + 0x007A)
+    marker_right = uint32_at(f, offs_mark + 0x008A)
 
-    out_dic = {'Left marker': marker_left,
-               'Right marker': marker_right,
-               }
+    out_dic = {
+        "Left marker": marker_left,
+        "Right marker": marker_right,
+    }
 
     return out_dic
 
 
 def chan_to_energy(dic):
-    """ Convert channels to energy using energy calibration coefficients."""
+    """Convert channels to energy using energy calibration coefficients."""
 
-    A = dic['Energy coefficients']
-    ch = dic['Channels']
-    energy = A[0] + A[1]*ch + A[2]*ch*ch + A[3]*ch*ch*ch
+    A = dic["Energy coefficients"]
+    ch = dic["Channels"]
+    energy = A[0] + A[1] * ch + A[2] * ch * ch + A[3] * ch * ch * ch
 
-    out_dic = {'Energy': energy}
+    out_dic = {"Energy": energy}
 
     return out_dic
 
@@ -359,14 +366,15 @@ def chan_to_energy(dic):
 def markers_integration(dic):
     # Count between left and right markers
     # TODO: check integral counts limits
-    chan_data = dic['Channels data']
-    l_marker = dic['Left marker']
-    r_marker = dic['Right marker']
-    marker_counts = np.sum(chan_data[l_marker-1:r_marker-1])
+    chan_data = dic["Channels data"]
+    l_marker = dic["Left marker"]
+    r_marker = dic["Right marker"]
+    marker_counts = np.sum(chan_data[l_marker - 1 : r_marker - 1])
 
-    out_dic = {'Counts in markers': marker_counts}
+    out_dic = {"Counts in markers": marker_counts}
 
     return out_dic
+
 
 ###########################################################
 # Format of the output text file
@@ -376,47 +384,53 @@ def markers_integration(dic):
 def write_to_file(filename, dic):
     """Write data to a text file."""
 
-    with open(filename, 'w') as f:
-        f.write('#\n')
-        f.write('# Sample name: {}\n'.format(dic['Sample name']))
-        f.write('\n')
+    with open(filename, "w") as f:
+        f.write("#\n")
+        f.write("# Sample name: {}\n".format(dic["Sample name"]))
+        f.write("\n")
 
-        f.write('# Sample id: {}\n'.format(dic['Sample id']))
-        f.write('# Sample type: {}\n'.format(dic['Sample type']))
-        f.write('# User name: {}\n'.format(dic['User name']))
-        f.write('# Sample description: {}\n'.format(dic['Sample description']))
-        f.write('#\n')
+        f.write("# Sample id: {}\n".format(dic["Sample id"]))
+        f.write("# Sample type: {}\n".format(dic["Sample type"]))
+        f.write("# User name: {}\n".format(dic["User name"]))
+        f.write("# Sample description: {}\n".format(dic["Sample description"]))
+        f.write("#\n")
 
-        f.write('# Start time: {}\n'.format(dic['Start time']))
-        f.write('# Real time (s): {:.3f}\n'.format(dic['Real time']))
-        f.write('# Live time (s): {:.3f}\n'.format(dic['Live time']))
-        f.write('#\n')
+        f.write("# Start time: {}\n".format(dic["Start time"]))
+        f.write("# Real time (s): {:.3f}\n".format(dic["Real time"]))
+        f.write("# Live time (s): {:.3f}\n".format(dic["Live time"]))
+        f.write("#\n")
 
-        f.write('# Total counts: {}\n'.format(dic['Total counts']))
-        f.write('#\n')
+        f.write("# Total counts: {}\n".format(dic["Total counts"]))
+        f.write("#\n")
 
-        f.write('# Left marker: {}\n'.format(dic['Left marker']))
-        f.write('# Right marker: {}\n'.format(dic['Right marker']))
-        f.write('# Counts: {}\n'.format(dic['Counts in markers']))
-        f.write('#\n')
+        f.write("# Left marker: {}\n".format(dic["Left marker"]))
+        f.write("# Right marker: {}\n".format(dic["Right marker"]))
+        f.write("# Counts: {}\n".format(dic["Counts in markers"]))
+        f.write("#\n")
 
-        f.write('# Energy calibration coefficients (E = sum(Ai * n**i))\n')
-        for j, co in enumerate(dic['Energy coefficients']):
-            f.write('#    A{} = {:.6e}\n'.format(j, co))
-        f.write('# Energy unit: {}\n'.format(dic['Energy unit']))
-        f.write('#\n')
+        f.write("# Energy calibration coefficients (E = sum(Ai * n**i))\n")
+        for j, co in enumerate(dic["Energy coefficients"]):
+            f.write("#    A{} = {:.6e}\n".format(j, co))
+        f.write("# Energy unit: {}\n".format(dic["Energy unit"]))
+        f.write("#\n")
 
-        f.write('# Shape calibration coefficients (FWHM = B0 + B1*E^(1/2)  Low Tail= B2 + B3*E)\n')
-        for j, co in enumerate(dic['Shape coefficients']):
-            f.write('#    B{} = {:.6e}\n'.format(j, co))
-        f.write('# Energy unit: {}\n'.format(dic['Energy unit']))
-        f.write('#\n')
+        f.write(
+            "# Shape calibration coefficients (FWHM = B0 + B1*E^(1/2)  Low Tail= B2 + B3*E)\n"
+        )
+        for j, co in enumerate(dic["Shape coefficients"]):
+            f.write("#    B{} = {:.6e}\n".format(j, co))
+        f.write("# Energy unit: {}\n".format(dic["Energy unit"]))
+        f.write("#\n")
 
-        f.write('# Channel data\n')
-        f.write('#     n     energy({})     counts     rate(1/s)\n'.format(dic['Energy unit']))
-        f.write('#'+50*'-'+'\n')
-        for i, j, k in zip(dic['Channels'], dic['Energy'], dic['Channels data']):
-            f.write('{:4d}\t{:.3e}\t{}\t{:.3e}\n'.format(i, j, k, k/dic['Live time']))
+        f.write("# Channel data\n")
+        f.write(
+            "#     n     energy({})     counts     rate(1/s)\n".format(
+                dic["Energy unit"]
+            )
+        )
+        f.write("#" + 50 * "-" + "\n")
+        for i, j, k in zip(dic["Channels"], dic["Energy"], dic["Channels data"]):
+            f.write("{:4d}\t{:.3e}\t{}\t{:.3e}\n".format(i, j, k, k / dic["Live time"]))
 
 
 if __name__ == "__main__":
@@ -429,36 +443,37 @@ if __name__ == "__main__":
         directory = "Examples"
         name = "cs137.CNF"
         filename = os.path.join(directory, name)
-        print('*'*10 + 'No input file was given\n')
-        print('*'*10 + 'Reading file:' + filename + '\n')
+        print("*" * 10 + "No input file was given\n")
+        print("*" * 10 + "Reading file:" + filename + "\n")
     else:
         filename = sys.argv[1]
 
-    c = read_cnf_file(filename, 'TRUE')
+    c = read_cnf_file(filename, "TRUE")
 
-    print('Sample id: {}'.format(c['Sample id']))
-    print('Measurement mode: {}'.format(c['Measurement mode']))
+    print("Sample id: {}".format(c["Sample id"]))
+    print("Measurement mode: {}".format(c["Measurement mode"]))
 
-    chan = c['Channels']
-    n_chan = c['Number of channels']
-    chan_data = c['Channels data']
-    energy = c['Energy']
-    print('Number of channels used: '+str(n_chan))
+    chan = c["Channels"]
+    n_chan = c["Number of channels"]
+    chan_data = c["Channels data"]
+    energy = c["Energy"]
+    print("Number of channels used: " + str(n_chan))
 
     # Testing channels and energy calibration
     inchan = 250
-    print('At channel {}:'.format(inchan))
-    print('\t Counts: {}'.format(chan_data[np.where(chan == inchan)][0]))
-    print('\t Energy: {}'.format(energy[np.where(chan == inchan)][0]))
+    print("At channel {}:".format(inchan))
+    print("\t Counts: {}".format(chan_data[np.where(chan == inchan)][0]))
+    print("\t Energy: {}".format(energy[np.where(chan == inchan)][0]))
 
     if True:
         import matplotlib.pyplot as plt
+
         fig1 = plt.figure(1, figsize=(8, 8))
 
         ax1 = fig1.add_subplot(111)
-        ax1.set_xlabel(u'Channels')
-        ax1.set_ylabel(u'Counts')
-        ax1.plot(chan, chan_data, 'k.')
-        ax1.set_title('File read: ' + filename)
+        ax1.set_xlabel("Channels")
+        ax1.set_ylabel("Counts")
+        ax1.plot(chan, chan_data, "k.")
+        ax1.set_title("File read: " + filename)
 
-        plt.show()
+        # plt.show()
